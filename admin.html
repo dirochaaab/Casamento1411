@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Convidados do Casamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#f6f2ea;
+    --sage:#6b7a5e;
+    --sage-dark:#4d5943;
+    --clay:#b98a5e;
+    --ink:#33321f;
+    --line:#ddd6c4;
+    --white:#fffdf8;
+    --red:#a3453f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--ivory);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:0;
+  }
+  header{
+    background:var(--white);
+    border-bottom:1px solid var(--line);
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  header h1{
+    font-family:'Cormorant Garamond',serif;
+    font-size:26px;
+    color:var(--sage-dark);
+    font-weight:600;
+  }
+  header .who{font-size:13px;color:#7a785f;}
+  header .who button{
+    margin-left:10px;
+    background:none;
+    border:none;
+    color:var(--red);
+    cursor:pointer;
+    font-size:13px;
+    text-decoration:underline;
+  }
+  main{max-width:960px;margin:0 auto;padding:28px 20px 60px;}
+  .login-wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .login-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    padding:36px 30px;
+    width:100%;
+    max-width:360px;
+  }
+  .login-card h1{
+    font-family:'Cormorant Garamond',serif;
+    font-size:28px;
+    color:var(--sage-dark);
+    margin-bottom:4px;
+    text-align:center;
+  }
+  .login-card p.sub{
+    text-align:center;
+    font-size:13px;
+    color:#7a785f;
+    margin-bottom:22px;
+  }
+  input, textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    background:var(--white);
+    color:var(--ink);
+  }
+  input:focus, textarea:focus{outline:none;border-color:var(--sage);}
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    color:#5a5946;
+    margin-bottom:5px;
+  }
+  .btn{
+    padding:11px 18px;
+    border:none;
+    border-radius:2px;
+    background:var(--sage);
+    color:var(--white);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn:hover{background:var(--sage-dark);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.full{width:100%;}
+  .btn.danger{background:var(--red);}
+  .btn.danger:hover{background:#832f2a;}
+  .btn.ghost{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink);
+  }
+  .btn.ghost:hover{border-color:var(--sage);}
+  .btn.small{padding:6px 10px;font-size:12px;}
+  .error{color:var(--red);font-size:13px;margin-top:10px;text-align:center;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--line);}
+  .tab{
+    padding:10px 16px;
+    font-size:14px;
+    cursor:pointer;
+    color:#7a785f;
+    border-bottom:2px solid transparent;
+  }
+  .tab.active{color:var(--sage-dark);border-color:var(--sage);font-weight:600;}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:24px;
+  }
+  .stat{
+    background:var(--white);
+    border:1px solid var(--line);
+    padding:16px;
+    text-align:center;
+  }
+  .stat .num{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--sage-dark);}
+  .stat .label{font-size:12px;color:#7a785f;margin-top:2px;}
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'Cormorant Garamond',serif;
+    font-size:20px;
+    color:var(--sage-dark);
+    margin-bottom:14px;
+    font-weight:600;
+  }
+
+  .guest-row{
+    border:1px solid var(--line);
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+    flex-wrap:wrap;
+    background:var(--white);
+  }
+  .guest-info .name{font-size:15px;font-weight:600;}
+  .guest-info .comp{font-size:13px;color:#7a785f;margin-top:2px;}
+  .guest-info .confirmed-list{font-size:13px;color:var(--sage-dark);margin-top:4px;}
+  .badge{
+    display:inline-block;
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:20px;
+    margin-top:6px;
+  }
+  .badge.pendente{background:#f0ede2;color:#8a7f5e;}
+  .badge.confirmado{background:#e6ede1;color:var(--sage-dark);}
+  .guest-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .link-box{
+    font-size:12px;
+    color:#7a785f;
+    word-break:break-all;
+    max-width:220px;
+  }
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){ .grid2{grid-template-columns:1fr;} .stats{grid-template-columns:1fr;} }
+
+  .hidden{display:none;}
+  .helper{font-size:12px;color:#8a7f5e;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <h1>Painel do Casamento</h1>
+    <p class="sub">Acesso restrito</p>
+    <div class="field">
+      <label for="loginEmail">E-mail</label>
+      <input type="email" id="loginEmail" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="loginSenha">Senha</label>
+      <input type="password" id="loginSenha" autocomplete="current-password">
+    </div>
+    <button class="btn full" id="loginBtn">Entrar</button>
+    <div class="error hidden" id="loginError"></div>
+  </div>
+</div>
+
+<div id="adminScreen" class="hidden">
+  <header>
+    <h1>Convidados — Painel</h1>
+    <div class="who"><span id="userEmail"></span><button id="logoutBtn">Sair</button></div>
+  </header>
+
+  <main>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statTotal">–</div><div class="label">Famílias convidadas</div></div>
+      <div class="stat"><div class="num" id="statConfirmados">–</div><div class="label">Já confirmaram</div></div>
+      <div class="stat"><div class="num" id="statPessoas">–</div><div class="label">Pessoas confirmadas</div></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="convidados">Convidados</div>
+      <div class="tab" data-tab="config">Configurações</div>
+    </div>
+
+    <div class="panel active" id="panel-convidados">
+      <div class="card">
+        <h2>Adicionar convidado</h2>
+        <div class="grid2">
+          <div class="field">
+            <label>Nome do titular</label>
+            <input type="text" id="novoTitular" placeholder="Ex: Bruna">
+          </div>
+          <div class="field">
+            <label>Acompanhantes (separados por vírgula)</label>
+            <input type="text" id="novoAcompanhantes" placeholder="Ex: Marido, Filho 1, Filho 2">
+          </div>
+        </div>
+        <button class="btn" id="addGuestBtn">Adicionar</button>
+        <p class="helper">O link de confirmação é gerado automaticamente ao adicionar.</p>
+      </div>
+
+      <div id="guestList"></div>
+    </div>
+
+    <div class="panel" id="panel-config">
+      <div class="card">
+        <h2>Links e imagens</h2>
+        <div class="field">
+          <label>Link do site do casamento</label>
+          <input type="text" id="cfgLinkSite" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label>URL da base para os links de confirmação (a página confirmacao.html)</label>
+          <input type="text" id="cfgLinkBaseConfirmacao" placeholder="https://seusite.com/confirmacao.html">
+        </div>
+        <div class="field">
+          <label>Imagem do botão "Ver site"</label>
+          <input type="text" id="cfgImgSite" placeholder="URL da imagem">
+        </div>
+        <div class="field">
+          <label>Imagem do botão "Confirmar presença"</label>
+          <input type="text" id="cfgImgConfirmacao" placeholder="URL da imagem">
+        </div>
+        <button class="btn" id="saveConfigBtn">Salvar configurações</button>
+        <p class="helper" id="configSaved"></p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ---- PREENCHER com a config do projeto chabarlista-5c83e ----
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3yGIEngg40x-6aCR9ZJaARYUXfoz6myI",
+    authDomain: "chabarlista-5c83e.firebaseapp.com",
+    projectId: "chabarlista-5c83e",
+    storageBucket: "chabarlista-5c83e.firebasestorage.app",
+    messagingSenderId: "817255330034",
+    appId: "1:817255330034:web:e42fdc3864f7e089cde06b"
+  };
+  // ----------------------------------------------------------------
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginScreen = document.getElementById('loginScreen');
+  const adminScreen = document.getElementById('adminScreen');
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const errEl = document.getElementById('loginError');
+    errEl.classList.add('hidden');
+    try{
+      await signInWithEmailAndPassword(auth, email, senha);
+    }catch(e){
+      errEl.textContent = "E-mail ou senha inválidos.";
+      errEl.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+  onAuthStateChanged(auth, (user) => {
+    if(user){
+      loginScreen.classList.add('hidden');
+      adminScreen.classList.remove('hidden');
+      document.getElementById('userEmail').textContent = user.email;
+      loadGuests();
+      loadConfig();
+    }else{
+      loginScreen.classList.remove('hidden');
+      adminScreen.classList.add('hidden');
+    }
+  });
+
+  // ---- Tabs ----
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---- Config ----
+  async function loadConfig(){
+    const ref = doc(db, "config", "convite");
+    const snap = await getDoc(ref);
+    if(snap.exists()){
+      const d = snap.data();
+      document.getElementById('cfgLinkSite').value = d.linkSite || '';
+      document.getElementById('cfgLinkBaseConfirmacao').value = d.linkBaseConfirmacao || '';
+      document.getElementById('cfgImgSite').value = d.imagemBotaoSite || '';
+      document.getElementById('cfgImgConfirmacao').value = d.imagemBotaoConfirmacao || '';
+    }
+  }
+
+  document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+    const ref = doc(db, "config", "convite");
+    await setDoc(ref, {
+      linkSite: document.getElementById('cfgLinkSite').value.trim(),
+      linkBaseConfirmacao: document.getElementById('cfgLinkBaseConfirmacao').value.trim(),
+      imagemBotaoSite: document.getElementById('cfgImgSite').value.trim(),
+      imagemBotaoConfirmacao: document.getElementById('cfgImgConfirmacao').value.trim()
+    }, { merge: true });
+    const msg = document.getElementById('configSaved');
+    msg.textContent = "Salvo ✓";
+    setTimeout(() => msg.textContent = '', 2000);
+  });
+
+  // ---- Guests ----
+  function slugify(nome){
+    return nome.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '') + Math.floor(Math.random()*900+100);
+  }
+
+  async function loadGuests(){
+    const snap = await getDocs(collection(db, "convidados"));
+    const guests = [];
+    snap.forEach(d => guests.push({ id: d.id, ...d.data() }));
+    renderGuests(guests);
+  }
+
+  function renderGuests(guests){
+    const listEl = document.getElementById('guestList');
+    listEl.innerHTML = '';
+
+    let totalConfirmados = 0;
+    let totalPessoas = 0;
+
+    guests.forEach(g => {
+      if(g.status === 'confirmado'){
+        totalConfirmados++;
+        totalPessoas += (g.confirmados || []).length;
+      }
+    });
+
+    document.getElementById('statTotal').textContent = guests.length;
+    document.getElementById('statConfirmados').textContent = totalConfirmados;
+    document.getElementById('statPessoas').textContent = totalPessoas;
+
+    const baseLink = document.getElementById('cfgLinkBaseConfirmacao').value || 'confirmacao.html';
+
+    guests.sort((a,b) => a.titular.localeCompare(b.titular)).forEach(g => {
+      const row = document.createElement('div');
+      row.className = 'guest-row';
+      const link = `${baseLink}?id=${g.id}`;
+      const statusClass = g.status === 'confirmado' ? 'confirmado' : 'pendente';
+      const statusLabel = g.status === 'confirmado' ? 'Confirmado' : 'Pendente';
+
+      row.innerHTML = `
+        <div class="guest-info">
+          <div class="name">${g.titular}</div>
+          <div class="comp">Pode levar: ${(g.acompanhantes || []).join(', ') || '—'}</div>
+          ${g.status === 'confirmado' ? `<div class="confirmed-list">Vão: ${(g.confirmados || []).join(', ')}</div>` : ''}
+          <span class="badge ${statusClass}">${statusLabel}</span>
+          <div class="link-box">${link}</div>
+        </div>
+        <div class="guest-actions">
+          <button class="btn ghost small copy-btn" data-link="${link}">Copiar link</button>
+          ${g.status === 'confirmado' ? `<button class="btn danger small remove-btn" data-id="${g.id}">Remover confirmação</button>` : ''}
+          <button class="btn ghost small delete-btn" data-id="${g.id}">Excluir convidado</button>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+
+    listEl.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.link);
+        btn.textContent = 'Copiado ✓';
+        setTimeout(() => btn.textContent = 'Copiar link', 1500);
+      });
+    });
+
+    listEl.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Remover a confirmação desse convidado? Ele voltará para pendente.')) return;
+        await updateDoc(doc(db, "convidados", btn.dataset.id), {
+          status: 'pendente',
+          confirmados: []
+        });
+        loadGuests();
+      });
+    });
+
+    listEl.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Excluir esse convidado permanentemente? Isso não pode ser desfeito.')) return;
+        await deleteDoc(doc(db, "convidados", btn.dataset.id));
+        loadGuests();
+      });
+    });
+  }
+
+  document.getElementById('addGuestBtn').addEventListener('click', async () => {
+    const titular = document.getElementById('novoTitular').value.trim();
+    const acompStr = document.getElementById('novoAcompanhantes').value.trim();
+    if(!titular) return;
+
+    const acompanhantes = acompStr
+      ? acompStr.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+
+    const id = slugify(titular);
+    await setDoc(doc(db, "convidados", id), {
+      titular,
+      acompanhantes,
+      status: 'pendente',
+      confirmados: [],
+      criadoEm: new Date().toISOString()
+    });
+
+    document.getElementById('novoTitular').value = '';
+    document.getElementById('novoAcompanhantes').value = '';
+    loadGuests();
+  });
+</script>
+</body>
+</html>
