@@ -210,9 +210,11 @@
   const guestId = params.get('id');
   const root = document.getElementById('app');
 
-  const NOMES_NOIVOS = "Nomes dos Noivos"; // trocar
+  let NOMES_NOIVOS = "Confirmação de Presença";
   let LINK_SITE = "#";
   let IMAGEM_CONVITE = "";
+  let IMAGEM_BOTAO_SITE = "";
+  let IMAGEM_BOTAO_CONFIRMACAO = "";
 
   async function carregarConfig(){
     try{
@@ -222,17 +224,37 @@
         const d = snap.data();
         LINK_SITE = d.linkSite || "#";
         IMAGEM_CONVITE = d.imagemConvite || "";
+        IMAGEM_BOTAO_SITE = d.imagemBotaoSite || "";
+        IMAGEM_BOTAO_CONFIRMACAO = d.imagemBotaoConfirmacao || "";
       }
     }catch(e){ /* segue com os valores padrão */ }
   }
 
   function renderOrnamentHeader(){
-    const imgHtml = IMAGEM_CONVITE
-      ? `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:100%;border-radius:2px;margin-bottom:18px;">`
-      : '';
-    return `${imgHtml}<div class="ornament">✦</div>
+    if(IMAGEM_CONVITE){
+      return `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:100%;border-radius:2px;margin-bottom:22px;">`;
+    }
+    return `<div class="ornament">✦</div>
       <h1>${NOMES_NOIVOS}</h1>
       <p class="sub">Confirmação de presença</p>`;
+  }
+
+  function renderSiteLink(){
+    if(IMAGEM_BOTAO_SITE){
+      return `<a href="${LINK_SITE}" target="_blank" style="display:block;margin-top:20px;">
+        <img src="${IMAGEM_BOTAO_SITE}" alt="Ver informações do casamento" style="width:100%;border-radius:2px;">
+      </a>`;
+    }
+    return `<a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+  }
+
+  function renderConfirmButton(){
+    if(IMAGEM_BOTAO_CONFIRMACAO){
+      return `<button class="btn-img" id="confirmarBtn" type="button" style="width:100%;border:none;background:none;padding:0;cursor:pointer;">
+        <img src="${IMAGEM_BOTAO_CONFIRMACAO}" alt="Confirmar presença" style="width:100%;border-radius:2px;display:block;">
+      </button>`;
+    }
+    return `<button class="btn" id="confirmarBtn">Confirmar presença</button>`;
   }
 
   function renderError(msg){
@@ -277,7 +299,7 @@
           <p style="margin-top:14px;">Se algo mudar, é só voltar nesse mesmo link.</p>
           <button class="btn secondary" id="editarBtn" style="margin-top:16px;">Alterar confirmação</button>
         </div>
-        <a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+        ${renderSiteLink()}`;
       document.getElementById('editarBtn').addEventListener('click', () => renderForm(ref, data, confirmadosAtuais));
       return;
     }
@@ -303,7 +325,9 @@
       </div>
       <button class="btn" id="confirmarBtn">Confirmar presença</button>
       <div class="error hidden" id="errorMsg"></div>
-      <a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+      ${renderSiteLink()}`;
+
+    root.querySelector('#confirmarBtn').outerHTML = renderConfirmButton();
 
     document.querySelectorAll('.option').forEach(opt => {
       opt.addEventListener('click', (e) => {
@@ -331,8 +355,14 @@
       }
 
       const btn = document.getElementById('confirmarBtn');
+      const isImgBtn = btn.classList.contains('btn-img');
       btn.disabled = true;
-      btn.textContent = "Enviando…";
+      if(isImgBtn){
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+      }else{
+        btn.textContent = "Enviando…";
+      }
 
       try{
         await updateDoc(ref, {
@@ -343,7 +373,12 @@
         render(ref, { ...data, confirmados: selecionados, status: 'confirmado' });
       }catch(e){
         btn.disabled = false;
-        btn.textContent = "Confirmar presença";
+        if(isImgBtn){
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }else{
+          btn.textContent = "Confirmar presença";
+        }
         errorEl.textContent = "Não foi possível enviar agora. Tente novamente.";
         errorEl.classList.remove('hidden');
       }
