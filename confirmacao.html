@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmação de Presença</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ivory:#f6f2ea;
+    --sage:#6b7a5e;
+    --sage-dark:#4d5943;
+    --clay:#b98a5e;
+    --ink:#33321f;
+    --line:#d8d0bd;
+    --white:#fffdf8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--ivory);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px 20px;
+    line-height:1.55;
+  }
+  .card{
+    width:100%;
+    max-width:440px;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:44px 32px 36px;
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:10px;
+    border:1px solid var(--line);
+    pointer-events:none;
+  }
+  .inner{position:relative;}
+  .ornament{
+    text-align:center;
+    color:var(--clay);
+    font-size:22px;
+    margin-bottom:18px;
+    letter-spacing:6px;
+  }
+  h1{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:500;
+    font-size:38px;
+    text-align:center;
+    color:var(--sage-dark);
+    line-height:1.15;
+    margin-bottom:6px;
+  }
+  .sub{
+    text-align:center;
+    font-size:14px;
+    color:#7a785f;
+    margin-bottom:28px;
+  }
+  .greeting{
+    font-size:15px;
+    margin-bottom:6px;
+  }
+  .greeting strong{color:var(--sage-dark);}
+  .instructions{
+    font-size:14px;
+    color:#5a5946;
+    margin-bottom:22px;
+  }
+  .list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:26px;
+  }
+  .option{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:13px 14px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+    background:var(--white);
+  }
+  .option:hover{border-color:var(--sage);}
+  .option.checked{
+    border-color:var(--sage);
+    background:#f0f3ec;
+  }
+  .option input{
+    width:18px;
+    height:18px;
+    accent-color:var(--sage);
+    flex-shrink:0;
+  }
+  .option label{
+    font-size:15px;
+    cursor:pointer;
+    flex:1;
+  }
+  .btn{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:2px;
+    background:var(--sage);
+    color:var(--white);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .btn:hover{background:var(--sage-dark);}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+  .btn.secondary{
+    background:transparent;
+    color:var(--sage-dark);
+    border:1px solid var(--sage);
+    margin-top:10px;
+  }
+  .btn.secondary:hover{background:#f0f3ec;}
+  .state{
+    text-align:center;
+    padding:20px 4px;
+  }
+  .state p{font-size:14px;color:#5a5946;}
+  .checkmark{
+    width:52px;height:52px;
+    border-radius:50%;
+    background:var(--sage);
+    color:var(--white);
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;
+    margin:0 auto 16px;
+  }
+  .confirmed-names{
+    font-size:14px;
+    color:var(--sage-dark);
+    margin:14px 0 4px;
+    text-align:left;
+    background:#f0f3ec;
+    border-radius:2px;
+    padding:12px 14px;
+  }
+  .confirmed-names div{padding:2px 0;}
+  .error{
+    color:#a44;
+    font-size:13px;
+    margin-top:10px;
+    text-align:center;
+  }
+  .site-link{
+    display:block;
+    text-align:center;
+    margin-top:20px;
+    font-size:13px;
+    color:var(--sage-dark);
+    text-decoration:none;
+    border-bottom:1px solid var(--sage-dark);
+    padding-bottom:1px;
+  }
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="inner" id="app">
+    <div class="ornament">✦</div>
+    <div class="state"><p>Carregando seu convite…</p></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ---- PREENCHER com a config do projeto chabarlista-5c83e ----
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3yGIEngg40x-6aCR9ZJaARYUXfoz6myI",
+    authDomain: "chabarlista-5c83e.firebaseapp.com",
+    projectId: "chabarlista-5c83e",
+    storageBucket: "chabarlista-5c83e.firebasestorage.app",
+    messagingSenderId: "817255330034",
+    appId: "1:817255330034:web:e42fdc3864f7e089cde06b"
+  };
+  // ----------------------------------------------------------------
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const params = new URLSearchParams(window.location.search);
+  const guestId = params.get('id');
+  const root = document.getElementById('app');
+
+  const NOMES_NOIVOS = "Nomes dos Noivos"; // trocar
+  const LINK_SITE = "#"; // preencher com o link do site do casamento
+
+  function renderOrnamentHeader(){
+    return `<div class="ornament">✦</div>
+      <h1>${NOMES_NOIVOS}</h1>
+      <p class="sub">Confirmação de presença</p>`;
+  }
+
+  function renderError(msg){
+    root.innerHTML = `${renderOrnamentHeader()}
+      <div class="state"><p>${msg}</p></div>`;
+  }
+
+  async function init(){
+    if(!guestId){
+      renderError("Não encontramos seu convite. Verifique se o link está completo.");
+      return;
+    }
+    try{
+      const ref = doc(db, "convidados", guestId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()){
+        renderError("Não encontramos seu convite. Fale com quem te enviou o link.");
+        return;
+      }
+      const data = snap.data();
+      render(ref, data);
+    }catch(e){
+      renderError("Não foi possível carregar seu convite agora. Tente novamente em instantes.");
+    }
+  }
+
+  function render(ref, data){
+    const acompanhantes = data.acompanhantes || [];
+    const jaConfirmado = data.status === 'confirmado';
+    const confirmadosAtuais = data.confirmados || [];
+
+    if(jaConfirmado){
+      const nomes = confirmadosAtuais.length ? confirmadosAtuais : [data.titular];
+      root.innerHTML = `${renderOrnamentHeader()}
+        <div class="state">
+          <div class="checkmark">✓</div>
+          <p><strong>Presença confirmada!</strong></p>
+          <div class="confirmed-names">
+            ${nomes.map(n => `<div>• ${n}</div>`).join('')}
+          </div>
+          <p style="margin-top:14px;">Se algo mudar, é só voltar nesse mesmo link.</p>
+          <button class="btn secondary" id="editarBtn" style="margin-top:16px;">Alterar confirmação</button>
+        </div>
+        <a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+      document.getElementById('editarBtn').addEventListener('click', () => renderForm(ref, data, confirmadosAtuais));
+      return;
+    }
+
+    renderForm(ref, data, []);
+  }
+
+  function renderForm(ref, data, preSelected){
+    const titular = data.titular;
+    const acompanhantes = data.acompanhantes || [];
+    const todos = [titular, ...acompanhantes];
+
+    root.innerHTML = `${renderOrnamentHeader()}
+      <p class="greeting">Olá, <strong>${titular}</strong>!</p>
+      <p class="instructions">Marque abaixo quem vai comparecer:</p>
+      <div class="list">
+        ${todos.map((nome, i) => `
+          <div class="option ${preSelected.includes(nome) ? 'checked' : ''}" data-name="${nome}">
+            <input type="checkbox" id="p${i}" ${preSelected.includes(nome) ? 'checked' : ''}>
+            <label for="p${i}">${nome}</label>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn" id="confirmarBtn">Confirmar presença</button>
+      <div class="error hidden" id="errorMsg"></div>
+      <a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+
+    document.querySelectorAll('.option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        if(e.target.tagName !== 'INPUT'){
+          const input = opt.querySelector('input');
+          input.checked = !input.checked;
+        }
+        opt.classList.toggle('checked', opt.querySelector('input').checked);
+      });
+    });
+
+    document.getElementById('confirmarBtn').addEventListener('click', async () => {
+      const selecionados = [];
+      document.querySelectorAll('.option').forEach(opt => {
+        if(opt.querySelector('input').checked){
+          selecionados.push(opt.dataset.name);
+        }
+      });
+
+      const errorEl = document.getElementById('errorMsg');
+      if(selecionados.length === 0){
+        errorEl.textContent = "Marque ao menos uma pessoa, ou avise diretamente se ninguém vai poder ir.";
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('confirmarBtn');
+      btn.disabled = true;
+      btn.textContent = "Enviando…";
+
+      try{
+        await updateDoc(ref, {
+          confirmados: selecionados,
+          status: 'confirmado',
+          confirmadoEm: new Date().toISOString()
+        });
+        render(ref, { ...data, confirmados: selecionados, status: 'confirmado' });
+      }catch(e){
+        btn.disabled = false;
+        btn.textContent = "Confirmar presença";
+        errorEl.textContent = "Não foi possível enviar agora. Tente novamente.";
+        errorEl.classList.remove('hidden');
+      }
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>
