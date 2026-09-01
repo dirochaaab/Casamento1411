@@ -201,6 +201,18 @@
 
   .hidden{display:none;}
   .helper{font-size:12px;color:#8a7f5e;margin-top:6px;}
+  .img-preview{
+    display:block;
+    max-width:140px;
+    max-height:140px;
+    margin-top:8px;
+    border:1px solid var(--line);
+    border-radius:2px;
+  }
+  input[type="file"]{
+    padding:8px;
+    font-size:13px;
+  }
 </style>
 </head>
 <body>
@@ -272,13 +284,21 @@
           <input type="text" id="cfgLinkBaseConfirmacao" placeholder="https://seusite.com/confirmacao.html">
         </div>
         <div class="field">
+          <label>Imagem do convite</label>
+          <input type="text" id="cfgImgConvite" placeholder="Cole aqui o link da imagem (ex: do postimages.org)">
+          <img id="previewConvite" class="img-preview hidden">
+        </div>
+        <div class="field">
           <label>Imagem do botão "Ver site"</label>
-          <input type="text" id="cfgImgSite" placeholder="URL da imagem">
+          <input type="text" id="cfgImgSite" placeholder="Cole aqui o link da imagem">
+          <img id="previewSite" class="img-preview hidden">
         </div>
         <div class="field">
           <label>Imagem do botão "Confirmar presença"</label>
-          <input type="text" id="cfgImgConfirmacao" placeholder="URL da imagem">
+          <input type="text" id="cfgImgConfirmacao" placeholder="Cole aqui o link da imagem">
+          <img id="previewConfirmacao" class="img-preview hidden">
         </div>
+        <p class="helper">Não tem um link de imagem ainda? Suba a foto em <a href="https://postimages.org" target="_blank" style="color:var(--sage-dark);">postimages.org</a> (gratuito, sem cadastro) e cole o link "Direct link" aqui.</p>
         <button class="btn" id="saveConfigBtn">Salvar configurações</button>
         <p class="helper" id="configSaved"></p>
       </div>
@@ -352,6 +372,16 @@
   });
 
   // ---- Config ----
+  function showPreview(id, url){
+    const img = document.getElementById(id);
+    if(url){
+      img.src = url;
+      img.classList.remove('hidden');
+    }else{
+      img.classList.add('hidden');
+    }
+  }
+
   async function loadConfig(){
     const ref = doc(db, "config", "convite");
     const snap = await getDoc(ref);
@@ -361,6 +391,10 @@
       document.getElementById('cfgLinkBaseConfirmacao').value = d.linkBaseConfirmacao || '';
       document.getElementById('cfgImgSite').value = d.imagemBotaoSite || '';
       document.getElementById('cfgImgConfirmacao').value = d.imagemBotaoConfirmacao || '';
+      document.getElementById('cfgImgConvite').value = d.imagemConvite || '';
+      showPreview('previewSite', d.imagemBotaoSite);
+      showPreview('previewConfirmacao', d.imagemBotaoConfirmacao);
+      showPreview('previewConvite', d.imagemConvite);
     }
   }
 
@@ -370,12 +404,21 @@
       linkSite: document.getElementById('cfgLinkSite').value.trim(),
       linkBaseConfirmacao: document.getElementById('cfgLinkBaseConfirmacao').value.trim(),
       imagemBotaoSite: document.getElementById('cfgImgSite').value.trim(),
-      imagemBotaoConfirmacao: document.getElementById('cfgImgConfirmacao').value.trim()
+      imagemBotaoConfirmacao: document.getElementById('cfgImgConfirmacao').value.trim(),
+      imagemConvite: document.getElementById('cfgImgConvite').value.trim()
     }, { merge: true });
     const msg = document.getElementById('configSaved');
     msg.textContent = "Salvo ✓";
     setTimeout(() => msg.textContent = '', 2000);
   });
+
+  // ---- Prévia ao colar o link da imagem ----
+  document.getElementById('cfgImgConvite').addEventListener('input', (e) =>
+    showPreview('previewConvite', e.target.value.trim()));
+  document.getElementById('cfgImgSite').addEventListener('input', (e) =>
+    showPreview('previewSite', e.target.value.trim()));
+  document.getElementById('cfgImgConfirmacao').addEventListener('input', (e) =>
+    showPreview('previewConfirmacao', e.target.value.trim()));
 
   // ---- Guests ----
   function slugify(nome){

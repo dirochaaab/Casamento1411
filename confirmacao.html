@@ -211,10 +211,26 @@
   const root = document.getElementById('app');
 
   const NOMES_NOIVOS = "Nomes dos Noivos"; // trocar
-  const LINK_SITE = "#"; // preencher com o link do site do casamento
+  let LINK_SITE = "#";
+  let IMAGEM_CONVITE = "";
+
+  async function carregarConfig(){
+    try{
+      const ref = doc(db, "config", "convite");
+      const snap = await getDoc(ref);
+      if(snap.exists()){
+        const d = snap.data();
+        LINK_SITE = d.linkSite || "#";
+        IMAGEM_CONVITE = d.imagemConvite || "";
+      }
+    }catch(e){ /* segue com os valores padrão */ }
+  }
 
   function renderOrnamentHeader(){
-    return `<div class="ornament">✦</div>
+    const imgHtml = IMAGEM_CONVITE
+      ? `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:100%;border-radius:2px;margin-bottom:18px;">`
+      : '';
+    return `${imgHtml}<div class="ornament">✦</div>
       <h1>${NOMES_NOIVOS}</h1>
       <p class="sub">Confirmação de presença</p>`;
   }
@@ -229,6 +245,7 @@
       renderError("Não encontramos seu convite. Verifique se o link está completo.");
       return;
     }
+    await carregarConfig();
     try{
       const ref = doc(db, "convidados", guestId);
       const snap = await getDoc(ref);
