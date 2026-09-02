@@ -29,7 +29,7 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:auto;min-height:100%;}
   body{
-    background:var(--ivory);
+    background:#b5734a;
     color:var(--ink);
     font-family:'Inter',sans-serif;
     min-height:100vh;
@@ -249,12 +249,13 @@
   }
 
   function renderSiteLink(){
+    const label = `<p style="text-align:center;font-size:14px;color:var(--sage-dark);margin-top:22px;margin-bottom:10px;">Acesse todas as informações aqui:</p>`;
     if(IMAGEM_BOTAO_SITE){
-      return `<a href="${LINK_SITE}" target="_blank" style="display:block;margin-top:20px;">
+      return `${label}<a href="${LINK_SITE}" target="_blank" style="display:block;">
         <img src="${IMAGEM_BOTAO_SITE}" alt="Ver informações do casamento" style="width:100%;border-radius:2px;">
       </a>`;
     }
-    return `<a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
+    return `${label}<a class="site-link" href="${LINK_SITE}" target="_blank">Ver informações do casamento</a>`;
   }
 
   function renderConfirmButton(){
