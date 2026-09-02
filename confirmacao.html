@@ -36,16 +36,16 @@
     display:flex;
     align-items:flex-start;
     justify-content:center;
-    padding:32px 20px;
+    padding:20px 12px;
     line-height:1.55;
   }
   .card{
     width:100%;
-    max-width:440px;
+    max-width:480px;
     background:var(--white);
     border:1px solid var(--line);
     border-radius:2px;
-    padding:44px 32px 36px;
+    padding:36px 22px 36px;
     position:relative;
   }
   .card::before{
@@ -241,7 +241,7 @@
 
   function renderOrnamentHeader(){
     if(IMAGEM_CONVITE){
-      return `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:100%;height:auto;display:block;border-radius:2px;margin-bottom:22px;">`;
+      return `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:calc(100% + 44px);height:auto;display:block;margin:-36px -22px 22px;">`;
     }
     return `<div class="ornament">✦</div>
       <h1>${NOMES_NOIVOS}</h1>
