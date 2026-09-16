@@ -241,7 +241,7 @@
 
   function renderOrnamentHeader(){
     if(IMAGEM_CONVITE){
-      return `<img src="${IMAGEM_CONVITE}" alt="Convite" style="width:calc(100% + 44px);height:auto;display:block;margin:-36px -22px 22px;">`;
+      return `<img src="${IMAGEM_CONVITE}" alt="Convite" fetchpriority="high" loading="eager" decoding="async" style="width:calc(100% + 44px);height:auto;display:block;margin:-36px -22px 22px;">`;
     }
     return `<div class="ornament">✦</div>
       <h1>${NOMES_NOIVOS}</h1>
