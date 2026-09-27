@@ -806,10 +806,16 @@
       return;
     }
 
-    await setDoc(doc(db, "mesas", String(numero)), {
-      capacidade,
-      criadoEm: new Date().toISOString()
-    });
+    try{
+      await setDoc(doc(db, "mesas", String(numero)), {
+        capacidade,
+        criadoEm: new Date().toISOString()
+      });
+    }catch(e){
+      errEl.textContent = "Não foi possível criar a mesa. Verifique as regras do Firestore (coleção 'mesas' precisa de permissão).";
+      errEl.classList.remove('hidden');
+      return;
+    }
 
     document.getElementById('mesaNumero').value = '';
     document.getElementById('mesaCapacidade').value = '8';
