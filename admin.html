@@ -123,14 +123,73 @@
   .btn.small{padding:6px 10px;font-size:12px;}
   .error{color:var(--red);font-size:13px;margin-top:10px;text-align:center;}
 
-  .tabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--line);}
+  .tabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--line);overflow-x:auto;}
   .tab{
     padding:10px 16px;
     font-size:14px;
     cursor:pointer;
     color:#7a785f;
     border-bottom:2px solid transparent;
+    white-space:nowrap;
   }
+
+  select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    background:var(--white);
+    color:var(--ink);
+  }
+  .badge.mesa{background:#e6ede1;color:var(--sage-dark);}
+  .badge.semmesa{background:#f6e7df;color:#a3532f;}
+  .mesa-card{
+    border:1px solid var(--line);
+    background:var(--white);
+    padding:14px 16px;
+    margin-bottom:12px;
+  }
+  .mesa-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  .mesa-head .title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--sage-dark);}
+  .mesa-head .count{font-size:13px;color:#7a785f;}
+  .mesa-head .count.full{color:#a3532f;font-weight:600;}
+  .seat{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    padding:7px 0;
+    border-top:1px solid var(--line);
+    font-size:14px;
+  }
+  .seat.empty{color:#a8a48e;font-style:italic;}
+  .pessoa-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    border:1px solid var(--line);
+    background:var(--white);
+    padding:12px 14px;
+    margin-bottom:8px;
+  }
+  .pessoa-row .nome{font-size:15px;font-weight:600;}
+  .pessoa-row .familia{font-size:12px;color:#7a785f;}
+  .pessoa-row .alocar{min-width:170px;flex:1;max-width:240px;}
+  .row-inline{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+  .row-inline .field{flex:1;min-width:130px;margin-bottom:0;}
+  .check-inline{display:flex;align-items:center;gap:8px;font-size:13px;color:#5a5946;margin:6px 0 14px;}
+  .check-inline input{width:auto;}
   .tab.active{color:var(--sage-dark);border-color:var(--sage);font-weight:600;}
 
   .panel{display:none;}
@@ -249,6 +308,7 @@
 
     <div class="tabs">
       <div class="tab active" data-tab="convidados">Convidados</div>
+      <div class="tab" data-tab="mesas">Organizador de festa</div>
       <div class="tab" data-tab="config">Configurações</div>
     </div>
 
@@ -270,6 +330,43 @@
       </div>
 
       <div id="guestList"></div>
+    </div>
+
+    <div class="panel" id="panel-mesas">
+      <div class="error hidden" id="mesasError" style="text-align:left;margin-bottom:16px;"></div>
+
+      <div class="stats">
+        <div class="stat"><div class="num" id="mesasStatConfirmados">–</div><div class="label">Pessoas confirmadas</div></div>
+        <div class="stat"><div class="num" id="mesasStatComMesa">–</div><div class="label">Com mesa</div></div>
+        <div class="stat"><div class="num" id="mesasStatSemMesa">–</div><div class="label">Sem mesa</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Criar mesa</h2>
+        <div class="row-inline">
+          <div class="field">
+            <label>Número da mesa</label>
+            <input type="number" id="mesaNumero" min="1" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>Quantas pessoas cabem</label>
+            <input type="number" id="mesaCapacidade" min="1" value="8" inputmode="numeric">
+          </div>
+          <button class="btn" id="criarMesaBtn">Criar mesa</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Alocar convidados</h2>
+        <p class="helper" style="margin-top:0;margin-bottom:8px;">Só aparecem aqui as pessoas que já confirmaram presença.</p>
+        <label class="check-inline"><input type="checkbox" id="soSemMesa"> Mostrar só quem está sem mesa</label>
+        <div id="pessoasList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mesas</h2>
+        <div id="mesasList"></div>
+      </div>
     </div>
 
     <div class="panel" id="panel-config">
@@ -312,7 +409,7 @@
     getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc
+    getFirestore, collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, deleteField
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   // ---- PREENCHER com a config do projeto chabarlista-5c83e ----
@@ -368,6 +465,7 @@
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      if(tab.dataset.tab === 'mesas') refreshMesasPanel();
     });
   });
 
@@ -528,6 +626,197 @@
     document.getElementById('novoAcompanhantes').value = '';
     loadGuests();
   });
+
+  // ==================================================
+  // Organizador de festa (mesas)
+  // ==================================================
+  let cachedGuests = [];
+  let cachedMesas = [];
+
+  function getPessoasConfirmadas(){
+    const pessoas = [];
+    cachedGuests.forEach(g => {
+      if(g.status !== 'confirmado') return;
+      (g.confirmados || []).forEach(nome => {
+        const mesaAtual = (g.alocacoes && g.alocacoes[nome]) ? g.alocacoes[nome] : null;
+        pessoas.push({ guestId: g.id, familia: g.titular, nome, mesa: mesaAtual });
+      });
+    });
+    return pessoas;
+  }
+
+  function contarOcupantes(numeroMesa){
+    return getPessoasConfirmadas().filter(p => p.mesa === numeroMesa).length;
+  }
+
+  async function refreshMesasPanel(){
+    const errEl = document.getElementById('mesasError');
+    errEl.classList.add('hidden');
+    try{
+      const guestSnap = await getDocs(collection(db, "convidados"));
+      cachedGuests = [];
+      guestSnap.forEach(d => cachedGuests.push({ id: d.id, ...d.data() }));
+
+      const mesaSnap = await getDocs(collection(db, "mesas"));
+      cachedMesas = [];
+      mesaSnap.forEach(d => cachedMesas.push({ id: d.id, numero: parseInt(d.id, 10), ...d.data() }));
+      cachedMesas.sort((a,b) => a.numero - b.numero);
+
+      renderPessoasParaAlocar();
+      renderMesas();
+      updateMesasStats();
+    }catch(e){
+      errEl.textContent = "Não foi possível carregar os dados agora. Tente novamente.";
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  function updateMesasStats(){
+    const pessoas = getPessoasConfirmadas();
+    const comMesa = pessoas.filter(p => p.mesa !== null).length;
+    document.getElementById('mesasStatConfirmados').textContent = pessoas.length;
+    document.getElementById('mesasStatComMesa').textContent = comMesa;
+    document.getElementById('mesasStatSemMesa').textContent = pessoas.length - comMesa;
+  }
+
+  function renderPessoasParaAlocar(){
+    const listEl = document.getElementById('pessoasList');
+    const soSemMesa = document.getElementById('soSemMesa').checked;
+    let pessoas = getPessoasConfirmadas();
+    if(soSemMesa) pessoas = pessoas.filter(p => p.mesa === null);
+
+    if(pessoas.length === 0){
+      listEl.innerHTML = `<p class="helper" style="margin-top:0;">Nenhum convidado confirmado ${soSemMesa ? 'sem mesa' : ''} no momento.</p>`;
+      return;
+    }
+
+    pessoas.sort((a,b) => a.nome.localeCompare(b.nome));
+
+    listEl.innerHTML = pessoas.map(p => {
+      const options = cachedMesas.map(m => {
+        const ocupantes = contarOcupantes(m.numero);
+        const cheia = ocupantes >= m.capacidade && p.mesa !== m.numero;
+        const selected = p.mesa === m.numero ? 'selected' : '';
+        return `<option value="${m.numero}" ${selected} ${cheia ? 'disabled' : ''}>Mesa ${m.numero} (${ocupantes}/${m.capacidade})${cheia ? ' — cheia' : ''}</option>`;
+      }).join('');
+
+      return `
+        <div class="pessoa-row">
+          <div>
+            <div class="nome">${p.nome}</div>
+            <div class="familia">Convite: ${p.familia}</div>
+          </div>
+          <select class="alocar" data-guest="${p.guestId}" data-nome="${p.nome}">
+            <option value="">Sem mesa</option>
+            ${options}
+          </select>
+        </div>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('.alocar').forEach(sel => {
+      sel.addEventListener('change', () => {
+        alocarPessoa(sel.dataset.guest, sel.dataset.nome, sel.value);
+      });
+    });
+  }
+
+  async function alocarPessoa(guestId, nome, valorMesa){
+    const campo = `alocacoes.${nome}`;
+    const update = {};
+    update[campo] = valorMesa ? parseInt(valorMesa, 10) : deleteField();
+    try{
+      await updateDoc(doc(db, "convidados", guestId), update);
+      await refreshMesasPanel();
+    }catch(e){
+      const errEl = document.getElementById('mesasError');
+      errEl.textContent = "Não foi possível salvar essa alocação. Tente novamente.";
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  function renderMesas(){
+    const listEl = document.getElementById('mesasList');
+    if(cachedMesas.length === 0){
+      listEl.innerHTML = `<p class="helper" style="margin-top:0;">Nenhuma mesa criada ainda.</p>`;
+      return;
+    }
+
+    const pessoas = getPessoasConfirmadas();
+
+    listEl.innerHTML = cachedMesas.map(m => {
+      const ocupantes = pessoas.filter(p => p.mesa === m.numero);
+      const cheia = ocupantes.length >= m.capacidade;
+      const seats = [];
+      for(let i = 0; i < m.capacidade; i++){
+        if(ocupantes[i]){
+          seats.push(`<div class="seat"><span>${ocupantes[i].nome}</span><span class="familia">${ocupantes[i].familia}</span></div>`);
+        }else{
+          seats.push(`<div class="seat empty"><span>Lugar vago</span></div>`);
+        }
+      }
+      return `
+        <div class="mesa-card">
+          <div class="mesa-head">
+            <span class="title">Mesa ${m.numero}</span>
+            <span class="count ${cheia ? 'full' : ''}">${ocupantes.length}/${m.capacidade} ocupados</span>
+            <button class="btn ghost small excluir-mesa-btn" data-numero="${m.numero}">Excluir mesa</button>
+          </div>
+          ${seats.join('')}
+        </div>
+      `;
+    }).join('');
+
+    listEl.querySelectorAll('.excluir-mesa-btn').forEach(btn => {
+      btn.addEventListener('click', () => excluirMesa(parseInt(btn.dataset.numero, 10)));
+    });
+  }
+
+  async function excluirMesa(numero){
+    const ocupantes = contarOcupantes(numero);
+    if(ocupantes > 0){
+      alert(`Essa mesa tem ${ocupantes} pessoa(s) alocada(s). Realoque ou remova essas pessoas antes de excluir a mesa.`);
+      return;
+    }
+    if(!confirm(`Excluir a Mesa ${numero}?`)) return;
+    await deleteDoc(doc(db, "mesas", String(numero)));
+    await refreshMesasPanel();
+  }
+
+  document.getElementById('criarMesaBtn').addEventListener('click', async () => {
+    const errEl = document.getElementById('mesasError');
+    errEl.classList.add('hidden');
+
+    const numero = parseInt(document.getElementById('mesaNumero').value, 10);
+    const capacidade = parseInt(document.getElementById('mesaCapacidade').value, 10);
+
+    if(!numero || numero < 1){
+      errEl.textContent = "Informe um número de mesa válido.";
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if(!capacidade || capacidade < 1){
+      errEl.textContent = "Informe quantas pessoas cabem na mesa.";
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if(cachedMesas.some(m => m.numero === numero)){
+      errEl.textContent = `Já existe uma Mesa ${numero}.`;
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    await setDoc(doc(db, "mesas", String(numero)), {
+      capacidade,
+      criadoEm: new Date().toISOString()
+    });
+
+    document.getElementById('mesaNumero').value = '';
+    document.getElementById('mesaCapacidade').value = '8';
+    await refreshMesasPanel();
+  });
+
+  document.getElementById('soSemMesa').addEventListener('change', renderPessoasParaAlocar);
 </script>
 </body>
 </html>
