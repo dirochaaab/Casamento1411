@@ -186,6 +186,9 @@
   .pessoa-row .nome{font-size:15px;font-weight:600;}
   .pessoa-row .familia{font-size:12px;color:#7a785f;}
   .pessoa-row .alocar{min-width:170px;flex:1;max-width:240px;}
+  @media (max-width:560px){
+    .pessoa-row .alocar{flex:1 1 100%;max-width:none;}
+  }
   .row-inline{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
   .row-inline .field{flex:1;min-width:130px;margin-bottom:0;}
   .check-inline{display:flex;align-items:center;gap:8px;font-size:13px;color:#5a5946;margin:6px 0 14px;}
@@ -367,6 +370,12 @@
         <h2>Mesas</h2>
         <div id="mesasList"></div>
       </div>
+
+      <div class="card">
+        <h2>Imprimir</h2>
+        <p class="helper" style="margin-top:0;margin-bottom:12px;">Gera um PDF com os nomes de cada mesa (e quem ainda está sem mesa, se houver), pronto para imprimir.</p>
+        <button class="btn" id="gerarPdfBtn">Gerar PDF das mesas</button>
+      </div>
     </div>
 
     <div class="panel" id="panel-config">
@@ -403,6 +412,7 @@
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
@@ -561,9 +571,9 @@
 
       row.innerHTML = `
         <div class="guest-info">
-          <div class="name">${g.titular}</div>
-          <div class="comp">Pode levar: ${(g.acompanhantes || []).join(', ') || '—'}</div>
-          ${g.status === 'confirmado' ? `<div class="confirmed-list">Vão: ${(g.confirmados || []).join(', ')}</div>` : ''}
+          <div class="name">${esc(g.titular)}</div>
+          <div class="comp">Pode levar: ${(g.acompanhantes || []).map(esc).join(', ') || '—'}</div>
+          ${g.status === 'confirmado' ? `<div class="confirmed-list">Vão: ${(g.confirmados || []).map(esc).join(', ')}</div>` : ''}
           <span class="badge ${statusClass}">${statusLabel}</span>
           <div class="link-box">${link}</div>
         </div>
@@ -633,6 +643,26 @@
   let cachedGuests = [];
   let cachedMesas = [];
 
+  function esc(s){
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Quem desistiu (ou foi desmarcado) não pode continuar "guardando" lugar numa mesa
+  async function limparAlocacoesOrfas(){
+    for(const g of cachedGuests){
+      if(!g.alocacoes) continue;
+      const confirmados = g.confirmados || [];
+      const nomes = Object.keys(g.alocacoes);
+      if(nomes.every(n => confirmados.includes(n))) continue;
+      const limpo = {};
+      nomes.forEach(n => { if(confirmados.includes(n)) limpo[n] = g.alocacoes[n]; });
+      try{
+        await updateDoc(doc(db, "convidados", g.id), { alocacoes: limpo });
+        g.alocacoes = limpo;
+      }catch(e){ /* se não conseguir limpar agora, tenta na próxima vez */ }
+    }
+  }
+
   function getPessoasConfirmadas(){
     const pessoas = [];
     cachedGuests.forEach(g => {
@@ -656,6 +686,7 @@
       const guestSnap = await getDocs(collection(db, "convidados"));
       cachedGuests = [];
       guestSnap.forEach(d => cachedGuests.push({ id: d.id, ...d.data() }));
+      await limparAlocacoesOrfas();
 
       const mesaSnap = await getDocs(collection(db, "mesas"));
       cachedMesas = [];
@@ -703,10 +734,11 @@
       return `
         <div class="pessoa-row">
           <div>
-            <div class="nome">${p.nome}</div>
-            <div class="familia">Convite: ${p.familia}</div>
+            <div class="nome">${esc(p.nome)}</div>
+            <div class="familia">Convite: ${esc(p.familia)}</div>
+            <button class="btn ghost small editar-nome-btn" style="margin-top:6px;" data-guest="${p.guestId}" data-nome="${esc(p.nome)}">Editar nome</button>
           </div>
-          <select class="alocar" data-guest="${p.guestId}" data-nome="${p.nome}">
+          <select class="alocar" data-guest="${p.guestId}" data-nome="${esc(p.nome)}">
             <option value="">Sem mesa</option>
             ${options}
           </select>
@@ -719,18 +751,68 @@
         alocarPessoa(sel.dataset.guest, sel.dataset.nome, sel.value);
       });
     });
+
+    listEl.querySelectorAll('.editar-nome-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        renomearPessoa(btn.dataset.guest, btn.dataset.nome);
+      });
+    });
   }
 
   async function alocarPessoa(guestId, nome, valorMesa){
-    const campo = `alocacoes.${nome}`;
-    const update = {};
-    update[campo] = valorMesa ? parseInt(valorMesa, 10) : deleteField();
+    // Reescreve o mapa inteiro (em vez de "alocacoes.nome") para funcionar com nomes que têm ponto, ex: "Dr. Marcos"
+    const g = cachedGuests.find(x => x.id === guestId);
+    const mapa = { ...((g && g.alocacoes) || {}) };
+    if(valorMesa) mapa[nome] = parseInt(valorMesa, 10);
+    else delete mapa[nome];
     try{
-      await updateDoc(doc(db, "convidados", guestId), update);
+      await updateDoc(doc(db, "convidados", guestId), { alocacoes: mapa });
       await refreshMesasPanel();
     }catch(e){
       const errEl = document.getElementById('mesasError');
       errEl.textContent = "Não foi possível salvar essa alocação. Tente novamente.";
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  async function renomearPessoa(guestId, nomeAntigo){
+    const g = cachedGuests.find(x => x.id === guestId);
+    if(!g) return;
+
+    const entrada = prompt('Nome correto da pessoa:', nomeAntigo);
+    if(entrada === null) return;
+    const novo = entrada.trim();
+    if(!novo || novo === nomeAntigo) return;
+
+    const todos = [g.titular, ...(g.acompanhantes || [])];
+    if(todos.some(n => n !== nomeAntigo && n.toLowerCase() === novo.toLowerCase())){
+      alert('Já existe alguém com esse nome nesse mesmo convite.');
+      return;
+    }
+
+    // Atualiza o nome em todos os lugares onde ele aparece, para a confirmação e a mesa continuarem batendo
+    const update = {
+      confirmados: (g.confirmados || []).map(n => n === nomeAntigo ? novo : n)
+    };
+    if(g.titular === nomeAntigo){
+      update.titular = novo;
+    }else{
+      update.acompanhantes = (g.acompanhantes || []).map(n => n === nomeAntigo ? novo : n);
+    }
+    if(g.alocacoes && g.alocacoes[nomeAntigo] !== undefined){
+      const mapa = { ...g.alocacoes };
+      mapa[novo] = mapa[nomeAntigo];
+      delete mapa[nomeAntigo];
+      update.alocacoes = mapa;
+    }
+
+    try{
+      await updateDoc(doc(db, "convidados", guestId), update);
+      await refreshMesasPanel();
+      loadGuests();
+    }catch(e){
+      const errEl = document.getElementById('mesasError');
+      errEl.textContent = "Não foi possível salvar o novo nome. Tente novamente.";
       errEl.classList.remove('hidden');
     }
   }
@@ -750,7 +832,7 @@
       const seats = [];
       for(let i = 0; i < m.capacidade; i++){
         if(ocupantes[i]){
-          seats.push(`<div class="seat"><span>${ocupantes[i].nome}</span><span class="familia">${ocupantes[i].familia}</span></div>`);
+          seats.push(`<div class="seat"><span>${esc(ocupantes[i].nome)}</span><span class="familia">${esc(ocupantes[i].familia)}</span></div>`);
         }else{
           seats.push(`<div class="seat empty"><span>Lugar vago</span></div>`);
         }
@@ -823,6 +905,133 @@
   });
 
   document.getElementById('soSemMesa').addEventListener('change', renderPessoasParaAlocar);
+
+  // ---- PDF das mesas ----
+  async function gerarPdfMesas(){
+    const btn = document.getElementById('gerarPdfBtn');
+    const errEl = document.getElementById('mesasError');
+    errEl.classList.add('hidden');
+
+    if(!window.jspdf){
+      errEl.textContent = "Não foi possível carregar o gerador de PDF. Confira a internet e recarregue a página.";
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Gerando…";
+
+    try{
+      await refreshMesasPanel(); // garante dados atualizados
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+
+      const PAGE_W = 210, PAGE_H = 297, M = 15, GAP = 8;
+      const COL_W = (PAGE_W - 2 * M - GAP) / 2;
+      const LINE = 6, HEAD = 10, BLOCK_GAP = 8;
+
+      // Cabeçalho da primeira página
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(18);
+      pdf.text('Distribuição de mesas', PAGE_W / 2, 18, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.text('Gabriela & Diogo  •  14/11/2026', PAGE_W / 2, 25, { align: 'center' });
+
+      let colY = [34, 34];
+
+      function desenharBloco(titulo, contagem, linhas, textoVazio){
+        const itens = linhas.length ? linhas : [textoVazio];
+        pdf.setFontSize(11);
+        const quebradas = itens.map(t => pdf.splitTextToSize(t, COL_W - 4));
+        const totalLinhas = quebradas.reduce((soma, q) => soma + q.length, 0);
+        const altura = HEAD + totalLinhas * LINE + BLOCK_GAP;
+
+        let col = colY[0] <= colY[1] ? 0 : 1;
+        if(colY[col] + altura > PAGE_H - M){
+          const outra = col === 0 ? 1 : 0;
+          if(colY[outra] + altura <= PAGE_H - M){
+            col = outra;
+          }else{
+            pdf.addPage();
+            colY = [M + 5, M + 5];
+            col = 0;
+          }
+        }
+
+        const x = M + col * (COL_W + GAP);
+        const y = colY[col];
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(13);
+        pdf.setTextColor(0);
+        pdf.text(titulo, x, y + 5);
+        if(contagem){
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          pdf.setTextColor(110);
+          pdf.text(contagem, x + COL_W, y + 5, { align: 'right' });
+        }
+        pdf.setDrawColor(170);
+        pdf.line(x, y + 7, x + COL_W, y + 7);
+
+        let ly = y + HEAD + 3;
+        pdf.setFontSize(11);
+        quebradas.forEach((q, i) => {
+          if(linhas.length){
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(0);
+          }else{
+            pdf.setFont('helvetica', 'italic');
+            pdf.setTextColor(140);
+          }
+          q.forEach(parte => {
+            pdf.text(parte, x + 2, ly);
+            ly += LINE;
+          });
+        });
+        pdf.setTextColor(0);
+
+        colY[col] = y + altura;
+      }
+
+      const pessoas = getPessoasConfirmadas();
+      const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR');
+
+      cachedMesas.forEach(m => {
+        const ocupantes = pessoas.filter(p => p.mesa === m.numero).sort(porNome);
+        const linhas = ocupantes.map((p, i) => `${i + 1}. ${p.nome}`);
+        desenharBloco(`Mesa ${m.numero}`, `${ocupantes.length}/${m.capacidade}`, linhas, 'Nenhum convidado alocado');
+      });
+
+      const semMesa = pessoas.filter(p => p.mesa === null).sort(porNome);
+      if(semMesa.length){
+        desenharBloco('Confirmados sem mesa', `${semMesa.length}`, semMesa.map((p, i) => `${i + 1}. ${p.nome}`), '');
+      }
+
+      // Numeração das páginas
+      const totalPaginas = pdf.getNumberOfPages();
+      for(let i = 1; i <= totalPaginas; i++){
+        pdf.setPage(i);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(140);
+        pdf.text(`${i}/${totalPaginas}`, PAGE_W / 2, PAGE_H - 8, { align: 'center' });
+      }
+
+      pdf.save('mesas-casamento.pdf');
+    }catch(e){
+      errEl.textContent = "Não foi possível gerar o PDF agora. Tente novamente.";
+      errEl.classList.remove('hidden');
+    }finally{
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+    }
+  }
+
+  document.getElementById('gerarPdfBtn').addEventListener('click', gerarPdfMesas);
 </script>
 </body>
 </html>

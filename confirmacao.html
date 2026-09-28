@@ -215,6 +215,10 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   const params = new URLSearchParams(window.location.search);
   const guestId = params.get('id');
   const root = document.getElementById('app');
@@ -304,7 +308,7 @@
           <div class="checkmark">✓</div>
           <p><strong>Presença confirmada!</strong></p>
           <div class="confirmed-names">
-            ${nomes.map(n => `<div>• ${n}</div>`).join('')}
+            ${nomes.map(n => `<div>• ${esc(n)}</div>`).join('')}
           </div>
           <p style="margin-top:14px;">Se algo mudar, é só voltar nesse mesmo link.</p>
           <button class="btn secondary" id="editarBtn" style="margin-top:16px;">Alterar confirmação</button>
@@ -323,13 +327,13 @@
     const todos = [titular, ...acompanhantes];
 
     root.innerHTML = `${renderOrnamentHeader()}
-      <p class="greeting">Olá, <strong>${titular}</strong>!</p>
+      <p class="greeting">Olá, <strong>${esc(titular)}</strong>!</p>
       <p class="instructions">Marque abaixo quem vai comparecer:</p>
       <div class="list">
         ${todos.map((nome, i) => `
-          <div class="option ${preSelected.includes(nome) ? 'checked' : ''}" data-name="${nome}">
+          <div class="option ${preSelected.includes(nome) ? 'checked' : ''}" data-name="${esc(nome)}">
             <input type="checkbox" id="p${i}" ${preSelected.includes(nome) ? 'checked' : ''}>
-            <label for="p${i}">${nome}</label>
+            <label for="p${i}">${esc(nome)}</label>
           </div>
         `).join('')}
       </div>
@@ -340,12 +344,12 @@
     root.querySelector('#confirmarBtn').outerHTML = renderConfirmButton();
 
     document.querySelectorAll('.option').forEach(opt => {
+      const input = opt.querySelector('input');
+      // O nome (label) e o quadradinho já marcam sozinhos; aqui só refletimos o estado no visual
+      input.addEventListener('change', () => opt.classList.toggle('checked', input.checked));
+      // Toque no espaço em volta (fora do nome e do quadradinho) também marca
       opt.addEventListener('click', (e) => {
-        if(e.target.tagName !== 'INPUT'){
-          const input = opt.querySelector('input');
-          input.checked = !input.checked;
-        }
-        opt.classList.toggle('checked', opt.querySelector('input').checked);
+        if(e.target === opt) input.click();
       });
     });
 
