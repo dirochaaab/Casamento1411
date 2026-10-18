@@ -361,8 +361,7 @@
 
       <div class="card">
         <h2>Alocar convidados</h2>
-        <p class="helper" style="margin-top:0;margin-bottom:8px;">Só aparecem aqui as pessoas que já confirmaram presença.</p>
-        <label class="check-inline"><input type="checkbox" id="soSemMesa"> Mostrar só quem está sem mesa</label>
+        <p class="helper" style="margin-top:0;margin-bottom:8px;">Mostra só quem já confirmou presença e ainda não tem mesa. Assim que você aloca alguém, ela sai dessa lista.</p>
         <div id="pessoasList"></div>
       </div>
 
@@ -712,12 +711,10 @@
 
   function renderPessoasParaAlocar(){
     const listEl = document.getElementById('pessoasList');
-    const soSemMesa = document.getElementById('soSemMesa').checked;
-    let pessoas = getPessoasConfirmadas();
-    if(soSemMesa) pessoas = pessoas.filter(p => p.mesa === null);
+    let pessoas = getPessoasConfirmadas().filter(p => p.mesa === null);
 
     if(pessoas.length === 0){
-      listEl.innerHTML = `<p class="helper" style="margin-top:0;">Nenhum convidado confirmado ${soSemMesa ? 'sem mesa' : ''} no momento.</p>`;
+      listEl.innerHTML = `<p class="helper" style="margin-top:0;">Todo mundo confirmado já está em uma mesa.</p>`;
       return;
     }
 
@@ -726,9 +723,8 @@
     listEl.innerHTML = pessoas.map(p => {
       const options = cachedMesas.map(m => {
         const ocupantes = contarOcupantes(m.numero);
-        const cheia = ocupantes >= m.capacidade && p.mesa !== m.numero;
-        const selected = p.mesa === m.numero ? 'selected' : '';
-        return `<option value="${m.numero}" ${selected} ${cheia ? 'disabled' : ''}>Mesa ${m.numero} (${ocupantes}/${m.capacidade})${cheia ? ' — cheia' : ''}</option>`;
+        const cheia = ocupantes >= m.capacidade;
+        return `<option value="${m.numero}" ${cheia ? 'disabled' : ''}>Mesa ${m.numero} (${ocupantes}/${m.capacidade})${cheia ? ' — cheia' : ''}</option>`;
       }).join('');
 
       return `
@@ -832,7 +828,11 @@
       const seats = [];
       for(let i = 0; i < m.capacidade; i++){
         if(ocupantes[i]){
-          seats.push(`<div class="seat"><span>${esc(ocupantes[i].nome)}</span><span class="familia">${esc(ocupantes[i].familia)}</span></div>`);
+          const oc = ocupantes[i];
+          seats.push(`<div class="seat">
+            <span>${esc(oc.nome)}<span class="familia"> — ${esc(oc.familia)}</span></span>
+            <button class="btn ghost small remover-da-mesa-btn" data-guest="${oc.guestId}" data-nome="${esc(oc.nome)}">Remover</button>
+          </div>`);
         }else{
           seats.push(`<div class="seat empty"><span>Lugar vago</span></div>`);
         }
@@ -851,6 +851,10 @@
 
     listEl.querySelectorAll('.excluir-mesa-btn').forEach(btn => {
       btn.addEventListener('click', () => excluirMesa(parseInt(btn.dataset.numero, 10)));
+    });
+
+    listEl.querySelectorAll('.remover-da-mesa-btn').forEach(btn => {
+      btn.addEventListener('click', () => alocarPessoa(btn.dataset.guest, btn.dataset.nome, ''));
     });
   }
 
@@ -904,7 +908,6 @@
     await refreshMesasPanel();
   });
 
-  document.getElementById('soSemMesa').addEventListener('change', renderPessoasParaAlocar);
 
   // ---- PDF das mesas ----
   async function gerarPdfMesas(){
